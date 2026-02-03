@@ -12,6 +12,7 @@
         color: white;
         font-family: Arial, sans-serif;
         text-align: center;
+        touch-action: none;
     }
 
     h1 { margin: 10px 0; }
@@ -21,6 +22,7 @@
         display: block;
         margin: 0 auto;
         border: 3px solid white;
+        touch-action: none;
     }
 
     #score {
@@ -46,7 +48,7 @@ let player = {
     y: 550,
     width: 40,
     height: 40,
-    speed: 3   // SLOWER movement
+    speed: 3
 };
 
 let keys = {};
@@ -54,12 +56,34 @@ let blocks = [];
 let score = 0;
 let gameOver = false;
 
-let spawnInterval = 1000; // milliseconds between spawns
+let spawnInterval = 1000;
 let lastSpawn = 0;
-let maxBlocks = 8; // HARD CAP to prevent overflow
+let maxBlocks = 8;
 
+// Keyboard
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
+
+// Touch control (drag to move)
+let touchStartX = null;
+
+canvas.addEventListener("touchstart", e => {
+    touchStartX = e.touches[0].clientX;
+});
+
+canvas.addEventListener("touchmove", e => {
+    const touchX = e.touches[0].clientX;
+    const deltaX = touchX - touchStartX;
+    player.x += deltaX * 0.15; // sensitivity
+    touchStartX = touchX;
+
+    // Keep player in bounds
+    if (player.x < 0) player.x = 0;
+    if (player.x + player.width > canvas.width)
+        player.x = canvas.width - player.width;
+
+    e.preventDefault();
+}, { passive: false });
 
 function spawnBlock() {
     if (blocks.length >= maxBlocks) return;
@@ -83,7 +107,6 @@ function updateBlocks() {
     blocks.forEach(block => {
         block.y += block.speed;
 
-        // Collision
         if (
             player.x < block.x + block.width &&
             player.x + player.width > block.x &&
@@ -94,7 +117,6 @@ function updateBlocks() {
         }
     });
 
-    // Remove offscreen blocks
     blocks = blocks.filter(block => block.y < canvas.height);
 }
 
@@ -126,12 +148,9 @@ function gameLoop(timestamp) {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Controlled spawn timing
     if (timestamp - lastSpawn > spawnInterval) {
         spawnBlock();
         lastSpawn = timestamp;
-
-        // VERY gradual difficulty increase
         if (spawnInterval > 450) spawnInterval -= 10;
     }
 
